@@ -60,7 +60,7 @@ export const DashboardPage = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
-  };
+  }; 
 
   return (
     <div style={styles.container}>
