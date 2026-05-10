@@ -57,3 +57,8 @@ export const authService = {
 export const dishesService = {
   getPremiumDishes: () => apiClient('/dishes/premium'),
 };
+
+// Servicio de usuarios (todos son admin)
+export const usersService = {
+  getAllUsers: () => apiClient('/users'),
+};
