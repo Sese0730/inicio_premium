@@ -6,8 +6,73 @@ export const DashboardPage = () => {
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dishes');
+  
+  // Estados para búsquedas
+  const [dishSearch, setDishSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [filteredDishes, setFilteredDishes] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   const token = localStorage.getItem('token');
+
+  // Función para buscar platillos
+  const searchDishes = async () => {
+    if (!dishSearch.trim()) {
+      // Si no hay búsqueda, mostrar todos
+      setFilteredDishes(dishes);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:3000/api/dishes/premium?search=${encodeURIComponent(dishSearch)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFilteredDishes(data.data);
+      }
+    } catch (error) {
+      console.error('Error buscando platillos:', error);
+    }
+  };
+
+  // Función para buscar usuarios
+  const searchUsers = async () => {
+    if (!userSearch.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:3000/api/users?search=${encodeURIComponent(userSearch)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (data.data && data.data.users) {
+          setFilteredUsers(data.data.users);
+        } else if (Array.isArray(data.data)) {
+          setFilteredUsers(data.data);
+        } else {
+          setFilteredUsers([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error buscando usuarios:', error);
+    }
+  };
+
+  // Limpiar búsqueda de platillos
+  const clearDishSearch = () => {
+    setDishSearch('');
+    setFilteredDishes(dishes);
+  };
+
+  // Limpiar búsqueda de usuarios
+  const clearUserSearch = () => {
+    setUserSearch('');
+    setFilteredUsers(users);
+  };
 
   useEffect(() => {
     if (!token) {
@@ -24,14 +89,17 @@ export const DashboardPage = () => {
       setLoading(true);
       
       try {
+        // 1. Cargar platillos premium
         const dishesRes = await fetch('http://localhost:3000/api/dishes/premium', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const dishesData = await dishesRes.json();
         if (dishesData.success) {
           setDishes(dishesData.data);
+          setFilteredDishes(dishesData.data);
         }
 
+        // 2. Cargar usuarios
         const usersRes = await fetch('http://localhost:3000/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -40,10 +108,13 @@ export const DashboardPage = () => {
         if (usersData.success) {
           if (usersData.data && usersData.data.users) {
             setUsers(usersData.data.users);
+            setFilteredUsers(usersData.data.users);
           } else if (Array.isArray(usersData.data)) {
             setUsers(usersData.data);
+            setFilteredUsers(usersData.data);
           } else {
             setUsers([]);
+            setFilteredUsers([]);
           }
         }
       } catch (error) {
@@ -60,7 +131,7 @@ export const DashboardPage = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
-  }; 
+  };
 
   return (
     <div style={styles.container}>
@@ -68,12 +139,12 @@ export const DashboardPage = () => {
       <div style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.logoSection}>
-            <span style={styles.logoIcon}>🍽️</span>
+            <span style={styles.logoIcon}></span>
             <h1 style={styles.title}>Menu<span style={styles.titleGold}>Premium</span></h1>
           </div>
           <div style={styles.userInfo}>
             <div style={styles.userBadge}>
-              <span style={styles.userIcon}>👤</span>
+              <span style={styles.userIcon}></span>
               <span style={styles.userEmail}>{user?.email}</span>
             </div>
             <button onClick={handleLogout} style={styles.logoutButton}>
@@ -91,7 +162,7 @@ export const DashboardPage = () => {
             onClick={() => setActiveTab('dishes')}
             style={{ ...styles.tab, ...(activeTab === 'dishes' ? styles.tabActive : {}) }}
           >
-            <span style={styles.tabIcon}>🍜</span>
+            <span style={styles.tabIcon}></span>
             Platillos Premium
             {activeTab === 'dishes' && <span style={styles.tabActiveIndicator}></span>}
           </button>
@@ -99,14 +170,14 @@ export const DashboardPage = () => {
             onClick={() => setActiveTab('users')}
             style={{ ...styles.tab, ...(activeTab === 'users' ? styles.tabActive : {}) }}
           >
-            <span style={styles.tabIcon}>👥</span>
+            <span style={styles.tabIcon}></span>
             Usuarios Registrados
             {activeTab === 'users' && <span style={styles.tabActiveIndicator}></span>}
           </button>
         </div>
       </div>
 
-      {/* CONTENIDO PREMIUM */}
+      {/* CONTENIDO */}
       <div style={styles.content}>
         {loading ? (
           <div style={styles.loadingContainer}>
@@ -115,64 +186,104 @@ export const DashboardPage = () => {
           </div>
         ) : (
           <>
+            {/* SECCIÓN PLATILLOS CON BUSCADOR */}
             {activeTab === 'dishes' && (
               <div style={styles.fadeIn}>
                 <div style={styles.sectionHeader}>
-                  <h2 style={styles.sectionTitle}>✨ Menú Exclusivo</h2>
+                  <h2 style={styles.sectionTitle}>Menú Exclusivo</h2>
                   <div style={styles.sectionLine}></div>
+                  
+                  {/* BUSCADOR DE PLATILLOS */}
+                  <div style={styles.searchContainer}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre..."
+                      value={dishSearch}
+                      onChange={(e) => setDishSearch(e.target.value)}
+                      style={styles.searchInput}
+                      onKeyPress={(e) => e.key === 'Enter' && searchDishes()}
+                    />
+                    <button onClick={searchDishes} style={styles.searchButton}>Buscar</button>
+                    {dishSearch && (
+                      <button onClick={clearDishSearch} style={styles.clearButton}>Limpiar</button>
+                    )}
+                  </div>
+                  <p style={styles.subtitle}>{filteredDishes.length} platillos disponibles</p>
                 </div>
+                
                 <div style={styles.grid}>
-                  {dishes.map(dish => (
-                    <div key={dish.id} style={styles.card}>
+                  {filteredDishes.map(dish => (
+                    <div key={dish.id} className="dish-card" style={styles.card}>
                       <div style={styles.cardGoldAccent}></div>
                       
-                      {/* ✅ IMAGEN DEL PLATILLO */}
-                      {dish.imageUrl && (
+                      {/* IMAGEN DEL PLATILLO */}
+                      {dish.imageUrl ? (
                         <div style={styles.imageContainer}>
                           <img 
                             src={dish.imageUrl} 
                             alt={dish.name}
                             style={styles.dishImage}
                             onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/400x250?text=Platillo+Premium';
+                              e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
                             }}
                           />
                           <div style={styles.imageOverlay}></div>
+                          <span style={styles.imageBadge}>Premium</span>
+                        </div>
+                      ) : (
+                        <div style={styles.imagePlaceholder}>
+                          <span style={styles.imagePlaceholderIcon}></span>
                         </div>
                       )}
                       
                       <div style={styles.cardContent}>
-                        <div style={styles.cardHeader}>
-                          <span style={styles.premiumBadge}>
-                            <span style={styles.starIcon}>⭐</span> Premium
-                          </span>
-                        </div>
                         <h3 style={styles.dishName}>{dish.name}</h3>
                         <p style={styles.dishDescription}>{dish.description}</p>
                         <div style={styles.cardFooter}>
-                          <span style={styles.priceIcon}>💰</span>
-                          <span style={styles.price}>${dish.price}</span>
+                          <div style={styles.priceContainer}>
+                            <span style={styles.priceIcon}></span>
+                            <span style={styles.price}>${parseFloat(dish.price).toFixed(2)}</span>
+                          </div>
                           <span style={styles.orderHint}>Ordenar →</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                {dishes.length === 0 && (
+                {filteredDishes.length === 0 && (
                   <div style={styles.emptyState}>
-                    <p>No hay platillos premium disponibles</p>
+                    <span style={styles.emptyIcon}></span>
+                    <p>No se encontraron platillos con "{dishSearch}"</p>
                   </div>
                 )}
               </div>
             )}
 
+            {/* SECCIÓN USUARIOS CON BUSCADOR */}
             {activeTab === 'users' && (
               <div style={styles.fadeIn}>
                 <div style={styles.sectionHeader}>
-                  <h2 style={styles.sectionTitle}>👑 Miembros Registrados</h2>
+                  <h2 style={styles.sectionTitle}>Miembros Registrados</h2>
                   <div style={styles.sectionLine}></div>
-                  <p style={styles.subtitle}>Total: <span style={styles.totalCount}>{users.length}</span> usuarios</p>
+                  
+                  {/* BUSCADOR DE USUARIOS */}
+                  <div style={styles.searchContainer}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por email..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      style={styles.searchInput}
+                      onKeyPress={(e) => e.key === 'Enter' && searchUsers()}
+                    />
+                    <button onClick={searchUsers} style={styles.searchButton}>Buscar</button>
+                    {userSearch && (
+                      <button onClick={clearUserSearch} style={styles.clearButton}>Limpiar</button>
+                    )}
+                  </div>
+                  <p style={styles.subtitle}>Total: <span style={styles.totalCount}>{filteredUsers.length}</span> usuarios</p>
                 </div>
+                
                 <div style={styles.tableContainer}>
                   <table style={styles.table}>
                     <thead>
@@ -184,7 +295,7 @@ export const DashboardPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map(userItem => (
+                      {filteredUsers.map(userItem => (
                         <tr key={userItem.id} style={userItem.email === user?.email ? styles.trCurrentUser : styles.tr}>
                           <td style={styles.td}>{userItem.id}</td>
                           <td style={styles.td}>
@@ -195,7 +306,7 @@ export const DashboardPage = () => {
                           </td>
                           <td style={styles.td}>
                             <span style={userItem.role === 'admin' ? styles.roleAdmin : styles.roleUser}>
-                              {userItem.role === 'admin' ? '👑 Administrador' : '👤 Usuario'}
+                              {userItem.role === 'admin' ? 'Administrador' : 'Usuario'}
                             </span>
                           </td>
                           <td style={styles.td}>
@@ -210,6 +321,11 @@ export const DashboardPage = () => {
                     </tbody>
                   </table>
                 </div>
+                {filteredUsers.length === 0 && (
+                  <div style={styles.emptyState}>
+                    <p>No se encontraron usuarios con "{userSearch}"</p>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -345,19 +461,59 @@ const styles = {
   },
   sectionHeader: {
     marginBottom: '2rem',
+    textAlign: 'center',
   },
   sectionTitle: {
     fontFamily: "'Playfair Display', serif",
-    fontSize: '1.75rem',
+    fontSize: '2rem',
     fontWeight: '700',
     color: '#1a1a2e',
     marginBottom: '0.5rem',
   },
   sectionLine: {
-    width: '60px',
+    width: '80px',
     height: '3px',
     background: 'linear-gradient(90deg, #d4af37, #f3e5ab)',
     borderRadius: '3px',
+    margin: '0 auto 0.75rem auto',
+  },
+  searchContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '0.75rem',
+    margin: '1.5rem 0 1rem 0',
+  },
+  searchInput: {
+    padding: '0.75rem 1rem',
+    width: '300px',
+    border: '1px solid rgba(212, 175, 55, 0.3)',
+    borderRadius: '50px',
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    fontFamily: "'Poppins', sans-serif",
+  },
+  searchButton: {
+    background: 'linear-gradient(135deg, #d4af37 0%, #b49450 100%)',
+    color: '#1a1a2e',
+    padding: '0.75rem 1.5rem',
+    border: 'none',
+    borderRadius: '50px',
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  clearButton: {
+    background: 'transparent',
+    color: '#6b7280',
+    padding: '0.75rem 1.5rem',
+    border: '1px solid rgba(212, 175, 55, 0.3)',
+    borderRadius: '50px',
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    fontWeight: '500',
   },
   subtitle: {
     color: '#6b7280',
@@ -371,49 +527,18 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
     gap: '2rem',
   },
   card: {
     position: 'relative',
     backgroundColor: '#ffffff',
-    borderRadius: '20px',
-    padding: '1.5rem',
-    boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s ease',
-    border: '1px solid rgba(212, 175, 55, 0.15)',
+    borderRadius: '24px',
     overflow: 'hidden',
+    boxShadow: '0 20px 35px -15px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.35s cubic-bezier(0.2, 0, 0, 1)',
+    border: '1px solid rgba(212, 175, 55, 0.15)',
   },
-  imageContainer: {
-  position: 'relative',
-  width: '100%',
-  height: '200px',
-  overflow: 'hidden',
-  borderRadius: '16px',
-  marginBottom: '1rem',
-  },
-
-  dishImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    transition: 'transform 0.5s ease',
-  },
-
-  imageOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3) 100%)',
-    pointerEvents: 'none',
-  },
-
-  cardContent: {
-    padding: '0 0.25rem',
-  },
-
   cardGoldAccent: {
     position: 'absolute',
     top: 0,
@@ -421,26 +546,54 @@ const styles = {
     right: 0,
     height: '3px',
     background: 'linear-gradient(90deg, #d4af37, #f3e5ab, #d4af37)',
+    zIndex: 2,
   },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginBottom: '1rem',
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '220px',
+    overflow: 'hidden',
+    backgroundColor: '#1a1a2e',
   },
-  premiumBadge: {
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    color: '#b49450',
+  dishImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transition: 'transform 0.5s ease',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.4) 100%)',
+  },
+  imageBadge: {
+    position: 'absolute',
+    top: '1rem',
+    right: '1rem',
+    backgroundColor: 'rgba(212, 175, 55, 0.95)',
+    color: '#1a1a2e',
     padding: '0.25rem 0.75rem',
     borderRadius: '50px',
     fontSize: '0.7rem',
     fontWeight: '700',
+    zIndex: 2,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: '220px',
+    background: 'linear-gradient(135deg, #f5f0e8, #e8e0d0)',
     display: 'flex',
     alignItems: 'center',
-    gap: '0.25rem',
-    border: '1px solid rgba(212, 175, 55, 0.3)',
+    justifyContent: 'center',
   },
-  starIcon: {
-    fontSize: '0.75rem',
+  imagePlaceholderIcon: {
+    fontSize: '3rem',
+  },
+  cardContent: {
+    padding: '1.5rem',
   },
   dishName: {
     fontFamily: "'Playfair Display', serif",
@@ -451,16 +604,25 @@ const styles = {
   },
   dishDescription: {
     color: '#6b7280',
-    fontSize: '0.875rem',
+    fontSize: '0.8rem',
     lineHeight: '1.5',
     marginBottom: '1rem',
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
   },
   cardFooter: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    justifyContent: 'space-between',
     paddingTop: '1rem',
     borderTop: '1px solid rgba(212, 175, 55, 0.15)',
+  },
+  priceContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.25rem',
   },
   priceIcon: {
     fontSize: '0.875rem',
@@ -469,7 +631,6 @@ const styles = {
     fontSize: '1.25rem',
     fontWeight: '700',
     color: '#d4af37',
-    flex: 1,
   },
   orderHint: {
     fontSize: '0.75rem',
@@ -477,6 +638,9 @@ const styles = {
     color: '#6b7280',
     cursor: 'pointer',
     transition: 'color 0.2s ease',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '50px',
+    border: '1px solid rgba(212, 175, 55, 0.3)',
   },
   tableContainer: {
     backgroundColor: '#ffffff',
@@ -527,6 +691,7 @@ const styles = {
     borderRadius: '50px',
     fontSize: '0.7rem',
     fontWeight: '600',
+    display: 'inline-block',
   },
   roleUser: {
     backgroundColor: 'rgba(107, 114, 128, 0.1)',
@@ -535,6 +700,7 @@ const styles = {
     borderRadius: '50px',
     fontSize: '0.7rem',
     fontWeight: '600',
+    display: 'inline-block',
   },
   loadingContainer: {
     display: 'flex',
@@ -561,9 +727,14 @@ const styles = {
     padding: '4rem',
     color: '#6b7280',
   },
+  emptyIcon: {
+    fontSize: '3rem',
+    display: 'block',
+    marginBottom: '1rem',
+  },
 };
 
-// Agregar keyframes para animaciones
+// Agregar keyframes y hover effects
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes fadeIn {
@@ -573,18 +744,27 @@ styleSheet.textContent = `
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
-  .card-premium:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px -15px rgba(212, 175, 55, 0.2);
+  
+  .dish-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 45px -20px rgba(212, 175, 55, 0.25);
     border-color: rgba(212, 175, 55, 0.4);
   }
-  button:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.05);
-  }
-
+  
   .dish-card:hover img {
-    transform: scale(1.05);
+    transform: scale(1.08);
+  }
+  
+  .dish-card:hover .order-hint {
+    color: #d4af37;
+    border-color: #d4af37;
+  }
+  
+  input:focus {
+    border-color: #d4af37;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
   }
 `;
 document.head.appendChild(styleSheet);
+
+export default DashboardPage;
