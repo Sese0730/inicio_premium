@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { DishesService } from './dishes.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 
@@ -8,8 +8,8 @@ export class DishesController {
 
   @Get('premium')
   @UseGuards(JwtAuthGuard)
-  async getPremiumDishes() {
-    const dishes = await this.dishesService.getPremiumDishes();
+  async getPremiumDishes(@Query('search') search: string = '') {
+    const dishes = await this.dishesService.getPremiumDishes(search);
     
     return {
       success: true,

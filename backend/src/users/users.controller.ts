@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
@@ -12,13 +12,12 @@ export class UsersController {
     private userRepository: Repository<User>,
   ) {}
 
-  // ✅ SOLO UNA VEZ esta función
   @Get()
   @UseGuards(JwtAuthGuard, AdminGuard)
   async getAllUsers(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
-    @Query('search') search: string = ''
+    @Query('search') search: string = '',
   ) {
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
@@ -26,7 +25,8 @@ export class UsersController {
 
     const queryBuilder = this.userRepository.createQueryBuilder('user');
     
-    if (search) {
+    // ✅ Búsqueda por email (parcial, case insensitive)
+    if (search && search.trim() !== '') {
       queryBuilder.where('user.email LIKE :search', { search: `%${search}%` });
     }
 
@@ -47,6 +47,7 @@ export class UsersController {
           limit: limitNumber,
           totalPages: Math.ceil(total / limitNumber),
         },
+        search: search || null,
       },
       error: null,
     };
