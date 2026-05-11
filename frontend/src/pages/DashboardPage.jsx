@@ -125,17 +125,35 @@ export const DashboardPage = () => {
                   {dishes.map(dish => (
                     <div key={dish.id} style={styles.card}>
                       <div style={styles.cardGoldAccent}></div>
-                      <div style={styles.cardHeader}>
-                        <span style={styles.premiumBadge}>
-                          <span style={styles.starIcon}>⭐</span> Premium
-                        </span>
-                      </div>
-                      <h3 style={styles.dishName}>{dish.name}</h3>
-                      <p style={styles.dishDescription}>{dish.description}</p>
-                      <div style={styles.cardFooter}>
-                        <span style={styles.priceIcon}>💰</span>
-                        <span style={styles.price}>${dish.price}</span>
-                        <span style={styles.orderHint}>Ordenar →</span>
+                      
+                      {/* ✅ IMAGEN DEL PLATILLO */}
+                      {dish.imageUrl && (
+                        <div style={styles.imageContainer}>
+                          <img 
+                            src={dish.imageUrl} 
+                            alt={dish.name}
+                            style={styles.dishImage}
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/400x250?text=Platillo+Premium';
+                            }}
+                          />
+                          <div style={styles.imageOverlay}></div>
+                        </div>
+                      )}
+                      
+                      <div style={styles.cardContent}>
+                        <div style={styles.cardHeader}>
+                          <span style={styles.premiumBadge}>
+                            <span style={styles.starIcon}>⭐</span> Premium
+                          </span>
+                        </div>
+                        <h3 style={styles.dishName}>{dish.name}</h3>
+                        <p style={styles.dishDescription}>{dish.description}</p>
+                        <div style={styles.cardFooter}>
+                          <span style={styles.priceIcon}>💰</span>
+                          <span style={styles.price}>${dish.price}</span>
+                          <span style={styles.orderHint}>Ordenar →</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -366,6 +384,36 @@ const styles = {
     border: '1px solid rgba(212, 175, 55, 0.15)',
     overflow: 'hidden',
   },
+  imageContainer: {
+  position: 'relative',
+  width: '100%',
+  height: '200px',
+  overflow: 'hidden',
+  borderRadius: '16px',
+  marginBottom: '1rem',
+  },
+
+  dishImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transition: 'transform 0.5s ease',
+  },
+
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3) 100%)',
+    pointerEvents: 'none',
+  },
+
+  cardContent: {
+    padding: '0 0.25rem',
+  },
+
   cardGoldAccent: {
     position: 'absolute',
     top: 0,
@@ -533,6 +581,10 @@ styleSheet.textContent = `
   button:hover {
     transform: translateY(-1px);
     filter: brightness(1.05);
+  }
+
+  .dish-card:hover img {
+    transform: scale(1.05);
   }
 `;
 document.head.appendChild(styleSheet);
