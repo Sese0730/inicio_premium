@@ -17,6 +17,9 @@ export class Dish {
   @Column({ name: 'is_premium', default: true })
   isPremium: boolean;
 
+  @Column({ nullable: true })
+  imageUrl: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
